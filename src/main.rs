@@ -1,26 +1,17 @@
 use termion::event::Key;
 use termion::raw::IntoRawMode;
 use termion::clear::All;
-use termion::input::{Keys, TermRead};
+use termion::input::TermRead;
 use termion::cursor;
-use std::io::{Write, Read, stdout, stdin};
+use std::io::{Write, stdout, stdin, Stdout};
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let mut stdout = stdout().into_raw_mode()?;
+mod buffer;
+mod editor;
 
-    write!(stdout, "{}{}", All, cursor::Goto(1, 1)).unwrap();
-    write!(stdout, "Tiny Text Editor").unwrap();
-    stdout.flush();
+use crate::buffer::Buffer;
+use crate::editor::Editor;
 
-    let stdin = stdin();
-
-    for c in stdin.keys() {
-        match c.unwrap() {
-            Key::Char('q') => break,
-            _ => continue,
-        }
-    }
-
-    Ok(())
+fn main() {
+    let mut editor = Editor::new();
+    editor.run();
 }
-
