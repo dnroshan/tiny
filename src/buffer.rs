@@ -1,4 +1,3 @@
-
 pub struct Buffer {
     name: String,
     cursor: (usize, usize),
@@ -11,7 +10,7 @@ impl Buffer {
         lines.push(String::new());
         let name = match name {
             Some(n) => n,
-            None => String::from("untitled")
+            None => String::from("untitled"),
         };
 
         Buffer {
@@ -40,12 +39,89 @@ impl Buffer {
             self.lines.push(String::new());
         }
 
-        let mut line = &mut self.lines[self.cursor.0];
-        if line.len() == 0 || line.len() == self.cursor.1 {
+        let line = &mut self.lines[self.cursor.0];
+        let len = line.len();
+        if len == 0 || len == self.cursor.1 {
             line.push(c);
         } else {
             line.insert(self.cursor.1, c);
         }
         self.cursor.1 += 1;
+    }
+
+    pub fn create_newline(&mut self) {
+        let len = self.lines[self.cursor.0].len();
+        if len == 0 || (self.cursor.0 == self.lines.len() - 1 && len == self.cursor.1) {
+            self.lines.push(String::new());
+        } else {
+            let (first_part, second_part) = {
+                let (first_part, second_part) = self.lines[self.cursor.0].split_at(self.cursor.1);
+                (first_part.to_string(), second_part.to_string())
+            };
+            self.lines[self.cursor.0] = first_part;
+            if self.cursor.0 + 1 == self.lines.len() - 1 {
+                self.lines.push(second_part);
+            } else {
+                self.lines.insert(self.cursor.0 + 1, second_part);
+            }
+        }
+        self.cursor.0 += 1;
+        self.cursor.1 = 0;
+    }
+
+    pub fn cursor_up(&mut self) {
+        if self.cursor.0 == 0 {
+            return;
+        }
+
+        self.cursor.0 -= 1;
+
+        let len = self.lines[self.cursor.0].len();
+        if self.cursor.1 >= self.lines[self.cursor.0].len() {
+            self.cursor.1 = len;
+        }
+    }
+
+    pub fn cursor_down(&mut self) {
+        if self.cursor.0 == self.lines.len() - 1 {
+            return;
+        }
+
+        self.cursor.0 += 1;
+        let len = self.lines[self.cursor.0].len();
+        if self.cursor.1 >= self.lines[self.cursor.0].len() {
+            self.cursor.1 = len;
+        }
+    }
+
+    pub fn cursor_left(&mut self) {
+        if self.cursor.1 == 0 {
+            return;
+        }
+
+        self.cursor.1 -= 1;
+    }
+
+    pub fn cursor_right(&mut self) {
+        let len = self.lines[self.cursor.0].len();
+        if self.cursor.1 >= len {
+            return;
+        }
+
+        self.cursor.1 += 1;
+    }
+
+    pub fn pop_char(&mut self) {
+        if self.cursor.1 > 0 {
+            self.lines[self.cursor.0].remove(self.cursor.1 - 1);
+            self.cursor.1 -= 1;
+        } else if self.cursor.0 == 0 {
+            return;
+        } else {
+            self.lines.remove(self.cursor.0);
+            self.cursor.0 -= 1;
+            let len = self.lines[self.cursor.0].len();
+            self.cursor.1 = len;
+        }
     }
 }
