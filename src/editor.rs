@@ -69,6 +69,16 @@ impl Editor {
             )
             .unwrap();
         }
+
+        let len = self.buffer.lines.len();
+        let height = self.screen_size.1 as usize;
+
+        if len < height {
+            for _ in len..(height - 1) { 
+                write!(&mut render, "{}~\n\r", clear::CurrentLine).unwrap();
+            }
+        }
+
         let (row, col) = self.buffer.get_cursor();
         write!(&mut render, "{}", cursor::Goto(col + 5, row + 1)).unwrap();
         write!(&mut render, "{}", cursor::Show).unwrap();
