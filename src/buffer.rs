@@ -1,27 +1,49 @@
+use std::fmt::Write;
+use std::fs;
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::Path;
+
 pub struct Buffer {
-    name: String,
+    path: String,
     cursor: (usize, usize),
     pub lines: Vec<String>,
+    empty: bool,
 }
 
 impl Buffer {
-    pub fn new(name: Option<String>) -> Self {
-        let mut lines = Vec::new();
-        lines.push(String::new());
-        let name = match name {
-            Some(n) => n,
-            None => String::from("untitled"),
+    pub fn new(path: Option<String>) -> Self {
+        let mut lines: Vec<String>;
+        let empty: bool;
+
+        let path = match path {
+            Some(path) => {
+                lines = Self::open(&path);
+                empty = false;
+                path
+            }
+            None => {
+                lines = Vec::new();
+                lines.push(String::new());
+                empty = true;
+                String::from("untitled")
+            }
         };
 
         Buffer {
-            name,
+            path,
             lines,
             cursor: (0, 0),
+            empty,
         }
     }
 
-    pub fn get_name(&self) -> &str {
-        &self.name
+    pub fn is_empty(&self) -> bool {
+        self.empty
+    }
+
+    pub fn get_path(&self) -> &str {
+        &self.path
     }
 
     pub fn get_cursor(&self) -> (u16, u16) {
@@ -123,5 +145,28 @@ impl Buffer {
             let len = self.lines[self.cursor.0].len();
             self.cursor.1 = len;
         }
+    }
+
+    fn open(path: &str) -> Vec<String> {
+        let path = Path::new(path);
+        let file = File::open(path).unwrap();
+        let reader = BufReader::new(file);
+
+        let mut lines = Vec::new();
+        for line in reader.lines() {
+            lines.push(String::from(line.unwrap()));
+        }
+
+        lines
+    }
+
+    pub fn write(&self) {
+        let filename = "out.txt";
+
+        let mut content = String::new();
+        for line in self.lines.iter() {
+            write!(&mut content, "{}\n", line).unwrap();
+        }
+        fs::write(&self.path, content.as_bytes()).unwrap();
     }
 }

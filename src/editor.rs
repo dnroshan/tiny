@@ -1,5 +1,6 @@
 use crate::buffer::Buffer;
-use std::io::{Read, Stdin, Stdout, Write, stdin, stdout};
+use std::fmt::Write as OtherWrite;
+use std::io::{Read, Stdout, Write, stdin, stdout};
 use termion::clear;
 use termion::color;
 use termion::cursor;
@@ -13,16 +14,14 @@ use termion::terminal_size;
 
 pub struct Editor {
     screen: AlternateScreen<RawTerminal<Stdout>>,
-    input: Stdin,
     screen_size: (u16, u16),
     cursor: (u16, u16),
     buffer: Buffer,
 }
 
 impl Editor {
-    pub fn new() -> Self {
+    pub fn new(buffer: Buffer) -> Self {
         let screen_size = terminal_size().unwrap();
-        // let _ = stdout().into_alternate_screen().unwrap().into_raw_mode().unwrap();
         let screen = stdout()
             .into_raw_mode()
             .unwrap()
@@ -31,28 +30,63 @@ impl Editor {
 
         Editor {
             screen,
-            input: stdin(),
             screen_size,
             cursor: (0, 0),
-            buffer: Buffer::new(None),
+            buffer,
         }
     }
 
-    pub fn run(&mut self) {
+    fn print_banner(&mut self) {
+        let banner = "Tiny Text Editor";
         write!(
             self.screen,
             "{}{}{}",
             cursor::Hide,
             clear::All,
-            cursor::Goto(self.screen_size.0 / 2, self.screen_size.1 / 2)
+            cursor::Goto(
+                self.screen_size.0 / 2 - banner.len() as u16 / 2,
+                self.screen_size.1 / 2
+            )
         )
         .unwrap();
-        write!(self.screen, "Tiny Text Editor").unwrap();
+        write!(self.screen, "{}", banner).unwrap();
         self.screen.flush().unwrap();
+    }
 
-        for key in self.input.by_ref().keys() {
+    fn print_content(&mut self) {
+        let mut render = String::new();
+        write!(&mut render, "{}", cursor::Hide).unwrap();
+        write!(&mut render, "{}", clear::All).unwrap();
+        write!(&mut render, "{}", cursor::Goto(1, 1)).unwrap();
+        for (index, line) in self.buffer.lines.iter().enumerate() {
+            write!(
+                &mut render,
+                "{}{:>3}{}{}\n\r",
+                color::Fg(color::Red),
+                index + 1,
+                color::Fg(color::Reset),
+                line
+            )
+            .unwrap();
+        }
+        let (row, col) = self.buffer.get_cursor();
+        write!(&mut render, "{}", cursor::Goto(col + 4, row + 1)).unwrap();
+        write!(&mut render, "{}", cursor::Show).unwrap();
+        write!(self.screen, "{}", render).unwrap();
+        self.screen.flush().unwrap();
+    }
+
+    pub fn run(&mut self) {
+        if self.buffer.is_empty() {
+            self.print_banner();
+        } else {
+            self.print_content();
+        }
+
+        for key in stdin().by_ref().keys() {
             match key.unwrap() {
                 Key::F(1) => break,
+                Key::F(2) => self.buffer.write(),
                 Key::Char(c) => {
                     if c == '\n' {
                         self.buffer.create_newline();
@@ -68,24 +102,7 @@ impl Editor {
                 _ => (),
             }
 
-            write!(self.screen, "{}", cursor::Hide).unwrap();
-            write!(self.screen, "{}", clear::All).unwrap();
-            write!(self.screen, "{}", cursor::Goto(1, 1)).unwrap();
-            for (index, line) in self.buffer.lines.iter().enumerate() {
-                write!(
-                    self.screen,
-                    "{}{:>3}{}{}\n\r",
-                    color::Fg(color::Red),
-                    index + 1,
-                    color::Fg(color::Reset),
-                    line
-                )
-                .unwrap();
-            }
-            let (row, col) = self.buffer.get_cursor();
-            write!(self.screen, "{}", cursor::Goto(col + 4, row + 1)).unwrap();
-            write!(self.screen, "{}", cursor::Show).unwrap();
-            self.screen.flush().unwrap();
+            self.print_content();
         }
     }
 }
