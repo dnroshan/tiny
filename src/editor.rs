@@ -56,12 +56,12 @@ impl Editor {
     fn print_content(&mut self) {
         let mut render = String::new();
         write!(&mut render, "{}", cursor::Hide).unwrap();
-        write!(&mut render, "{}", clear::All).unwrap();
         write!(&mut render, "{}", cursor::Goto(1, 1)).unwrap();
         for (index, line) in self.buffer.lines.iter().enumerate() {
             write!(
                 &mut render,
-                "{}{:>3}{}{}\n\r",
+                "{}{}{:>3} {}{}\n\r",
+                clear::CurrentLine,
                 color::Fg(color::Red),
                 index + 1,
                 color::Fg(color::Reset),
@@ -70,7 +70,7 @@ impl Editor {
             .unwrap();
         }
         let (row, col) = self.buffer.get_cursor();
-        write!(&mut render, "{}", cursor::Goto(col + 4, row + 1)).unwrap();
+        write!(&mut render, "{}", cursor::Goto(col + 5, row + 1)).unwrap();
         write!(&mut render, "{}", cursor::Show).unwrap();
         write!(self.screen, "{}", render).unwrap();
         self.screen.flush().unwrap();
@@ -83,7 +83,7 @@ impl Editor {
             self.print_content();
         }
 
-        for key in stdin().by_ref().keys() {
+        for key in stdin().keys() {
             match key.unwrap() {
                 Key::F(1) => break,
                 Key::F(2) => self.buffer.write(),
